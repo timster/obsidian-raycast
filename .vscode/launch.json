@@ -1,0 +1,52 @@
+{
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Debug Current Test File",
+      "cwd": "${workspaceFolder}/${relativeFileDirname}",
+      "command": "pnpm run test:watch '${file}'"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Debug project tests",
+      "cwd": "${fileWorkspaceFolder}",
+      "command": "pnpm run test:watch --filter ${input:package} ${input:testFilter}"
+    },
+    {
+      "command": "pnpm dev",
+      "name": "Run merchant-portal",
+      "request": "launch",
+      "type": "node-terminal",
+      "cwd": "${workspaceFolder}/packages/merchant-portal/core"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "testFilter",
+      "type": "promptString",
+      "description": "Add a test filter (e.g `-- discounts+`) or leave empty to run all tests"
+    },
+    {
+      "type": "pickString",
+      "id": "package",
+      "description": "Which package do you want to test?",
+      "options": [
+        "@merchant-portal/core",
+        "@customer-portal/affinity-theme",
+        "@customer-portal/renderer",
+        "@customer-portal/widgets",
+        "@merchant-portal/design-system",
+        "@recharge-packages/format",
+        "@customer-portal/affinity-api",
+        "@customer-portal/affinity-components",
+        "@rechargeapps/subscription-widget",
+        "@recharge-packages/subscription-widget-lib"
+      ],
+      "default": "component"
+    }
+  ]
+}

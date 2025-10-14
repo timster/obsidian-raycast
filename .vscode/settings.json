@@ -1,0 +1,42 @@
+{
+  "cSpell.words": [
+    "baconjs",
+    "chakra",
+    "Customcheckout",
+    "gsutil",
+    "localstorage",
+    "moxios",
+    "Onetimes",
+    "rechargeapps",
+    "Revalidator",
+    "typecheck",
+    "unformat",
+    "unformats",
+    "Upsell",
+    "vuex",
+    "waitlist"
+  ],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "eslint.validate": ["javascript", "typescript", "typescriptreact"],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "nuxt.isNuxtApp": false,
+  "search.exclude": {
+    "**/coverage": true,
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/.cache": true,
+    "**/build": true,
+    "**/.docusaurus": true
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // Exclude the esm.ts file from the storefront experiences so we don't import from it locally
+  "typescript.preferences.autoImportFileExcludePatterns": ["./packages/shopify/storefront-experiences/src/esm.ts"]
+}
