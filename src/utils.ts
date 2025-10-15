@@ -1,5 +1,5 @@
 import { dirname, join, relative } from "path";
-import { readdirSync, readFileSync, writeFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 
 import { getPreferenceValues } from "@raycast/api";
 
@@ -147,10 +147,4 @@ export function useTasks(): Task[] {
     })
 
     .filter((task): task is Task => Boolean(task && !task.completed));
-}
-
-export function completeTask(task: Task) {
-  const { obsidianDirectory } = getPreferenceValues<Preferences>();
-  const content = task.content.replace(/completed:\s*(true|false)/i, `completed: true`);
-  writeFileSync(join(obsidianDirectory, task.path + ".md"), content);
 }
