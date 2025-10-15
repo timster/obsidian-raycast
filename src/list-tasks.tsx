@@ -1,5 +1,12 @@
 import { List, Action, Icon, ActionPanel, open } from "@raycast/api";
-import { useTasks } from "./utils";
+import { Task, useTasks } from "./utils";
+
+function completeTask(task: Task) {
+  const content = task.content.replace(/completed:\s*(true|false)/i, `completed: true`);
+  open(`obsidian://new?vault=Obsidian&file=${task.path}&content=${content}&overwrite=true`);
+
+  console.log(`obsidian://new?vault=Obsidian&file=${task.path}&content=${content}&overwrite=true`);
+}
 
 export default function searchTasksCommand() {
   const tasks = useTasks();
@@ -8,16 +15,14 @@ export default function searchTasksCommand() {
     <List isShowingDetail={false}>
       {tasks.map((task) => (
         <List.Item
-          key={task.lineNumber}
+          key={task.key}
           title={task.title}
-          icon={task.done ? Icon.CheckCircle : Icon.Circle}
-          accessories={[{ tag: task.date }]}
+          icon={task.completed ? Icon.CheckCircle : Icon.Circle}
+          accessories={[{ tag: task.due }]}
           actions={
             <ActionPanel>
-              <Action
-                title="Open Current Tasks"
-                onAction={() => open("obsidian://open?vault=Obsidian&file=general/Current Tasks")}
-              />
+              <Action title="Open Task" onAction={() => open(`obsidian://open?vault=Obsidian&file=${task.path}`)} />
+              <Action title="Complete Task" onAction={() => completeTask(task)} />
             </ActionPanel>
           }
         />

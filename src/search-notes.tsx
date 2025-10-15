@@ -25,7 +25,7 @@ export default function searchNotesCommand() {
           title={result.item.title}
           icon="extension-icon.png"
           accessories={[{ icon: Icon.Folder, tag: result.item.directory || "root" }]}
-          detail={<List.Item.Detail markdown={result.item.content} />}
+          detail={<List.Item.Detail markdown={result.item.markdown} />}
           actions={
             <ActionPanel>
               <Action

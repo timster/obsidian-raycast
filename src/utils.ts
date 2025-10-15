@@ -1,10 +1,10 @@
 import { dirname, join, relative } from "path";
-import { readdirSync, readFileSync } from "fs";
+import { readdirSync, readFileSync, writeFileSync } from "fs";
 
 import { getPreferenceValues } from "@raycast/api";
 
 export function makeSafeNoteName(title: string): string {
-  return encodeURIComponent(title.trim().replace(/[\\/]/g, "-"));
+  return title.trim().replace(/[\\/]/g, "-");
 }
 
 export type Note = {
@@ -13,22 +13,24 @@ export type Note = {
   directory: string;
   content: string;
   title: string;
+  markdown: string;
 };
 
 export type Snippet = Note & {
   language: string;
-  markdown: string;
 };
 
-export type Task = {
-  title: string;
-  date: string | null;
-  line: string;
-  lineNumber: number;
-  done: boolean;
+export type Task = Note & {
+  completed: boolean;
+  created: string | null;
+  due: string | null;
 };
 
-export function getAllNotes(rootPath: string): Note[] {
+const ignoredDirectories = ["tasks", ".git", ".obsidian", "assets"];
+
+export function getAllNotes(rootPath: string = ""): Note[] {
+  const { obsidianDirectory } = getPreferenceValues<Preferences>();
+
   const result: Note[] = [];
   let keyCounter = 0;
 
@@ -37,19 +39,25 @@ export function getAllNotes(rootPath: string): Note[] {
       const entryPath = join(currentPath, entry.name);
 
       if (entry.isDirectory()) {
+        if (ignoredDirectories.includes(entry.name)) {
+          continue;
+        }
         walk(entryPath);
       } else if (entry.name.endsWith(".md")) {
         try {
           const content = readFileSync(entryPath, "utf-8");
           const title = entry.name.replace(/\.md$/, "").trim();
-
-          result.push({
+          const note = {
             key: keyCounter++,
-            path: relative(rootPath, entryPath).replace(/\.md$/, ""),
-            directory: relative(rootPath, dirname(entryPath)),
+            path: relative(obsidianDirectory, entryPath).replace(/\.md$/, ""),
+            directory: dirname(entryPath).split(/[\\/]/).pop() || "",
             title,
-            content: `# ${title}\n\n${content}`,
-          });
+            content,
+            markdown: `# ${title}\n\n${content}`,
+          };
+
+          console.log(note);
+          result.push(note);
         } catch (err) {
           console.error(`Error reading ${entryPath}:`, err);
         }
@@ -57,18 +65,17 @@ export function getAllNotes(rootPath: string): Note[] {
     }
   }
 
-  walk(rootPath);
+  walk(join(obsidianDirectory, rootPath));
+
   return result;
 }
 
 export function useNotes(): Note[] {
-  const { obsidianDirectory } = getPreferenceValues<Preferences>();
-  return getAllNotes(obsidianDirectory);
+  return getAllNotes();
 }
+
 export function useSnippets(): Snippet[] {
-  const { obsidianDirectory } = getPreferenceValues<Preferences>();
-  const root = join(obsidianDirectory, "snippets");
-  const notes = getAllNotes(root);
+  const notes = getAllNotes("snippets");
 
   const snippets: Snippet[] = [];
   const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
@@ -95,26 +102,56 @@ export function useSnippets(): Snippet[] {
 
   return snippets;
 }
+
 export function useTasks(): Task[] {
-  const { obsidianDirectory } = getPreferenceValues<Preferences>();
-  const lines = readFileSync(join(obsidianDirectory, "general", "Current Tasks.md"), "utf8").split("\n");
+  const notes = getAllNotes("tasks");
 
-  return lines
-    .map((line, index): Task | null => {
-      const match = line.match(/^- \[( |x)\] (.+)/);
-      if (!match) return null;
+  return notes
+    .map((note): Task => {
+      const completedMatch = note.content.match(/completed:\s*(true|false)/i);
+      const completed = completedMatch ? completedMatch[1].toLowerCase() === "true" : false;
 
-      const dateMatch = match[2].match(/^\[(\d{4}-\d{2}-\d{2})\] (.+)/);
-      const title = dateMatch ? dateMatch[2] : match[2];
-      const date = dateMatch ? dateMatch[1] : null;
+      const createdMatch = note.content.match(/created:\s*(\d{4}-\d{2}-\d{2})/i);
+      const created = createdMatch ? createdMatch[1] : null;
+
+      const dueMatch = note.content.match(/due:\s*(\d{4}-\d{2}-\d{2})/i);
+      const due = dueMatch ? dueMatch[1] : null;
 
       return {
-        title,
-        date,
-        line,
-        lineNumber: index,
-        done: match[1] === "x",
+        ...note,
+        completed,
+        created,
+        due,
       };
     })
-    .filter((task): task is Task => Boolean(task && !task.done));
+
+    .sort((a, b) => {
+      // Sort by due first: oldest on top (nulls at bottom)
+      if (a.due && b.due) {
+        if (a.due < b.due) return -1;
+        if (a.due > b.due) return 1;
+      } else if (a.due && !b.due) {
+        return -1;
+      } else if (!a.due && b.due) {
+        return 1;
+      }
+      // If due is same or both missing, sort by created: oldest on top (nulls at bottom)
+      if (a.created && b.created) {
+        if (a.created < b.created) return -1;
+        if (a.created > b.created) return 1;
+      } else if (a.created && !b.created) {
+        return -1;
+      } else if (!a.created && b.created) {
+        return 1;
+      }
+      return 0;
+    })
+
+    .filter((task): task is Task => Boolean(task && !task.completed));
+}
+
+export function completeTask(task: Task) {
+  const { obsidianDirectory } = getPreferenceValues<Preferences>();
+  const content = task.content.replace(/completed:\s*(true|false)/i, `completed: true`);
+  writeFileSync(join(obsidianDirectory, task.path + ".md"), content);
 }
