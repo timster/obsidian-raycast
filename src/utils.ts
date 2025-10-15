@@ -56,7 +56,6 @@ export function getAllNotes(rootPath: string = ""): Note[] {
             markdown: `# ${title}\n\n${content}`,
           };
 
-          console.log(note);
           result.push(note);
         } catch (err) {
           console.error(`Error reading ${entryPath}:`, err);

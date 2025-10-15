@@ -4,8 +4,6 @@ import { Task, useTasks } from "./utils";
 function completeTask(task: Task) {
   const content = task.content.replace(/completed:\s*(true|false)/i, `completed: true`);
   open(`obsidian://new?vault=Obsidian&file=${task.path}&content=${content}&overwrite=true`);
-
-  console.log(`obsidian://new?vault=Obsidian&file=${task.path}&content=${content}&overwrite=true`);
 }
 
 export default function searchTasksCommand() {
