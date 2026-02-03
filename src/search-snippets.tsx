@@ -39,7 +39,7 @@ export default function searchSnippetsCommand() {
             <ActionPanel>
               <Action.CopyToClipboard title="Copy Snippet" content={snippet.content} />
               {snippet.language == "sql" && (
-                <Action.OpenInBrowser title="Open in Sql Console" url={getQueryUrl(snippet.content)} />
+                <Action.OpenInBrowser title="Open in SQL Console" url={getQueryUrl(snippet.content)} />
               )}
               {snippet.language !== "sql" && (
                 <Action.OpenInBrowser title="Open in Splunk" url={getSplunkUrl(snippet.content)} />
