@@ -1,23 +1,16 @@
 import { useMemo, useState } from "react";
 import { ActionPanel, List, Action, Icon, getPreferenceValues, open } from "@raycast/api";
-import Fuse from "fuse.js";
 
-import { useSnippets } from "./utils";
+import { searchSnippets, useSnippets } from "./utils";
 
 export default function searchSnippetsCommand() {
   const { querySearchUrl, splunkSearchUrl } = getPreferenceValues<ExtensionPreferences>();
 
-  const notes = useSnippets();
+  const { data: snippets = [], isLoading } = useSnippets();
 
   const [searchText, setSearchText] = useState<string>("");
 
-  const searchResults = useMemo(() => {
-    const fuse = new Fuse(notes, {
-      includeScore: true,
-      keys: ["title", "content"],
-    });
-    return fuse.search(searchText);
-  }, [notes, searchText]);
+  const searchResults = useMemo(() => searchSnippets(snippets, searchText), [snippets, searchText]);
 
   function getSplunkUrl(query: string) {
     return `${splunkSearchUrl}${query}`;
@@ -29,31 +22,29 @@ export default function searchSnippetsCommand() {
 
   return (
     <List
+      filtering={false}
       isShowingDetail={true}
       searchBarPlaceholder="Search for snippets..."
-      isLoading={false}
+      isLoading={isLoading}
       onSearchTextChange={setSearchText}
     >
-      {searchResults.map((result) => (
+      {searchResults.map((snippet) => (
         <List.Item
-          key={result.item.key}
-          title={result.item.title}
+          key={snippet.key}
+          title={snippet.title}
           icon="extension-icon.png"
-          accessories={[{ icon: Icon.Folder, tag: result.item.directory || "root" }]}
-          detail={<List.Item.Detail markdown={result.item.markdown} />}
+          accessories={[{ icon: Icon.Folder, tag: snippet.directory || "root" }]}
+          detail={<List.Item.Detail markdown={snippet.markdown} />}
           actions={
             <ActionPanel>
-              <Action.CopyToClipboard title="Copy Snippet" content={result.item.content} />
-              {result.item.language == "sql" && (
-                <Action.OpenInBrowser title="Open in Sql Console" url={getQueryUrl(result.item.content)} />
+              <Action.CopyToClipboard title="Copy Snippet" content={snippet.content} />
+              {snippet.language == "sql" && (
+                <Action.OpenInBrowser title="Open in Sql Console" url={getQueryUrl(snippet.content)} />
               )}
-              {result.item.language !== "sql" && (
-                <Action.OpenInBrowser title="Open in Splunk" url={getSplunkUrl(result.item.content)} />
+              {snippet.language !== "sql" && (
+                <Action.OpenInBrowser title="Open in Splunk" url={getSplunkUrl(snippet.content)} />
               )}
-              <Action
-                title="Open Note"
-                onAction={() => open(`obsidian://open?vault=Obsidian&file=${result.item.path}`)}
-              />
+              <Action title="Open Note" onAction={() => void open(`obsidian://open?vault=Obsidian&file=${snippet.path}`)} />
             </ActionPanel>
           }
         />

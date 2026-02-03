@@ -41,19 +41,6 @@
       "mode": "no-view"
     },
     {
-      "name": "create-task",
-      "title": "Create Task",
-      "description": "Create a task in Obsidian.",
-      "mode": "view",
-      "arguments": [
-        {
-          "name": "title",
-          "placeholder": "Title",
-          "type": "text"
-        }
-      ]
-    },
-    {
       "name": "create-note",
       "title": "Create Note",
       "description": "Create a note in Obsidian.",
@@ -82,8 +69,7 @@
   ],
   "dependencies": {
     "@raycast/api": "^1.94.4",
-    "@raycast/utils": "^1.17.0",
-    "fuse.js": "^7.1.0"
+    "@raycast/utils": "^1.17.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",

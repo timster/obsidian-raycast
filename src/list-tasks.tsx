@@ -1,30 +1,39 @@
 import { List, Action, Icon, ActionPanel, open } from "@raycast/api";
-import { Task, useTasks } from "./utils";
+import { useTasks } from "./utils";
 
-function completeTask(task: Task) {
-  const content = task.content.replace(/completed:\s*(true|false)/i, `completed: true`);
-  open(`obsidian://new?vault=Obsidian&file=${task.path}&content=${content}&overwrite=true`);
+function parseDueDate(title: string): { cleanTitle: string; dueDate: string | null } {
+  const dueDateMatch = title.match(/📅\s*(\d{4}-\d{2}-\d{2})/);
+  if (dueDateMatch) {
+    const cleanTitle = title.replace(/\s*📅\s*\d{4}-\d{2}-\d{2}/, "").trim();
+    return { cleanTitle, dueDate: dueDateMatch[1] };
+  }
+  return { cleanTitle: title, dueDate: null };
 }
 
-export default function searchTasksCommand() {
-  const tasks = useTasks();
+export default function listTasksCommand() {
+  const { data: tasks = [], isLoading } = useTasks();
 
   return (
-    <List isShowingDetail={false}>
-      {tasks.map((task) => (
-        <List.Item
-          key={task.key}
-          title={task.title}
-          icon={task.completed ? Icon.CheckCircle : Icon.Circle}
-          accessories={[{ tag: task.due }]}
-          actions={
-            <ActionPanel>
-              <Action title="Open Task" onAction={() => open(`obsidian://open?vault=Obsidian&file=${task.path}`)} />
-              <Action title="Complete Task" onAction={() => completeTask(task)} />
-            </ActionPanel>
-          }
-        />
-      ))}
+    <List isShowingDetail={false} isLoading={isLoading}>
+      {tasks.map((task) => {
+        const { cleanTitle, dueDate } = parseDueDate(task.title);
+        return (
+          <List.Item
+            key={task.key}
+            title={cleanTitle}
+            icon={Icon.Circle}
+            accessories={dueDate ? [{ text: dueDate, icon: Icon.Calendar }] : []}
+            actions={
+              <ActionPanel>
+                <Action
+                  title="Open Tasks File"
+                  onAction={() => void open(`obsidian://open?vault=Obsidian&file=Current Tasks`)}
+                />
+              </ActionPanel>
+            }
+          />
+        );
+      })}
     </List>
   );
 }

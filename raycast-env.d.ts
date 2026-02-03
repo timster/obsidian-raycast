@@ -30,8 +30,6 @@ declare namespace Preferences {
   export type OpenDailyNote = ExtensionPreferences & {}
   /** Preferences accessible in the `open-tasks` command */
   export type OpenTasks = ExtensionPreferences & {}
-  /** Preferences accessible in the `create-task` command */
-  export type CreateTask = ExtensionPreferences & {}
   /** Preferences accessible in the `create-note` command */
   export type CreateNote = ExtensionPreferences & {}
   /** Preferences accessible in the `create-meeting-note` command */
@@ -49,11 +47,6 @@ declare namespace Arguments {
   export type OpenDailyNote = {}
   /** Arguments passed to the `open-tasks` command */
   export type OpenTasks = {}
-  /** Arguments passed to the `create-task` command */
-  export type CreateTask = {
-  /** Title */
-  "title": string
-}
   /** Arguments passed to the `create-note` command */
   export type CreateNote = {
   /** Title */

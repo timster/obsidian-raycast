@@ -1,37 +1,36 @@
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { ActionPanel, List, Action, Icon, open } from "@raycast/api";
-import Fuse from "fuse.js";
 
-import { useNotes } from "./utils";
+import { useNotes, searchNotes } from "./utils";
 
 export default function searchNotesCommand() {
-  const notes = useNotes();
+  const { data: notes = [], isLoading } = useNotes();
 
   const [searchText, setSearchText] = useState<string>("");
 
-  const searchResults = useMemo(() => {
-    const fuse = new Fuse(notes, {
-      includeScore: true,
-      keys: ["title", "content"],
-    });
-    return fuse.search(searchText);
-  }, [notes, searchText]);
+  const searchResults = useMemo(() => searchNotes(notes, searchText), [notes, searchText]);
 
   return (
-    <List isShowingDetail={true} searchBarPlaceholder="Search for notes..." onSearchTextChange={setSearchText}>
-      {searchResults.map((result) => (
+    <List
+      filtering={false}
+      isShowingDetail={true}
+      isLoading={isLoading}
+      searchBarPlaceholder="Search for notes..."
+      onSearchTextChange={setSearchText}
+    >
+      {searchResults.map((note) => (
         <List.Item
-          key={result.item.key}
-          title={result.item.title}
+          key={note.key}
+          title={note.title}
           icon="extension-icon.png"
-          accessories={[{ icon: Icon.Folder, tag: result.item.directory || "root" }]}
-          detail={<List.Item.Detail markdown={result.item.markdown} />}
+          accessories={[
+            { icon: Icon.Folder, tag: note.directory || "root" },
+            // { text: result.score !== undefined ? `${result.score.toFixed(2)}` : undefined },
+          ]}
+          detail={<List.Item.Detail markdown={note.markdown} />}
           actions={
             <ActionPanel>
-              <Action
-                title="Open Note"
-                onAction={() => open(`obsidian://open?vault=Obsidian&file=${result.item.path}`)}
-              />
+              <Action title="Open Note" onAction={() => void open(`obsidian://open?vault=Obsidian&file=${note.path}`)} />
             </ActionPanel>
           }
         />

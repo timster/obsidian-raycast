@@ -1,7 +1,8 @@
 import { dirname, join, relative } from "path";
-import { readdirSync, readFileSync } from "fs";
+import { readdir, readFile } from "fs/promises";
 
 import { getPreferenceValues } from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
 
 export function makeSafeNoteName(title: string): string {
   return title.trim().replace(/[\\/]/g, "-");
@@ -20,32 +21,34 @@ export type Snippet = Note & {
   language: string;
 };
 
-export type Task = Note & {
-  completed: boolean;
-  created: string | null;
-  due: string | null;
+export type Task = {
+  key: number;
+  title: string;
+  line: number;
 };
 
 const ignoredDirectories = ["tasks", ".git", ".obsidian", "assets"];
 
-export function getAllNotes(rootPath: string = ""): Note[] {
+export async function getAllNotes(rootPath: string = ""): Promise<Note[]> {
   const { obsidianDirectory } = getPreferenceValues<Preferences>();
 
   const result: Note[] = [];
   let keyCounter = 0;
 
-  function walk(currentPath: string) {
-    for (const entry of readdirSync(currentPath, { withFileTypes: true })) {
+  async function walk(currentPath: string) {
+    const entries = await readdir(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
       const entryPath = join(currentPath, entry.name);
 
       if (entry.isDirectory()) {
         if (ignoredDirectories.includes(entry.name)) {
           continue;
         }
-        walk(entryPath);
+        await walk(entryPath);
       } else if (entry.name.endsWith(".md")) {
         try {
-          const content = readFileSync(entryPath, "utf-8");
+          const content = await readFile(entryPath, "utf-8");
           const title = entry.name.replace(/\.md$/, "").trim();
           const note = {
             key: keyCounter++,
@@ -64,22 +67,22 @@ export function getAllNotes(rootPath: string = ""): Note[] {
     }
   }
 
-  walk(join(obsidianDirectory, rootPath));
+  await walk(join(obsidianDirectory, rootPath));
 
   return result;
 }
 
-export function useNotes(): Note[] {
-  return getAllNotes();
+export function useNotes() {
+  return useCachedPromise(getAllNotes);
 }
 
-export function useSnippets(): Snippet[] {
-  const notes = getAllNotes("snippets");
+async function getSnippets(): Promise<Snippet[]> {
+  const notes = await getAllNotes("snippets");
 
   const snippets: Snippet[] = [];
   const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
 
-  let keyCounter = 1;
+  let keyCounter = 0;
 
   for (const note of notes) {
     for (const match of note.content.matchAll(codeBlockRegex)) {
@@ -102,49 +105,69 @@ export function useSnippets(): Snippet[] {
   return snippets;
 }
 
-export function useTasks(): Task[] {
-  const notes = getAllNotes("tasks");
+export function useSnippets() {
+  return useCachedPromise(getSnippets);
+}
 
-  return notes
-    .map((note): Task => {
-      const completedMatch = note.content.match(/completed:\s*(true|false)/i);
-      const completed = completedMatch ? completedMatch[1].toLowerCase() === "true" : false;
+async function getTasks(): Promise<Task[]> {
+  const { obsidianDirectory } = getPreferenceValues<Preferences>();
+  const filePath = join(obsidianDirectory, "Current Tasks.md");
 
-      const createdMatch = note.content.match(/created:\s*(\d{4}-\d{2}-\d{2})/i);
-      const created = createdMatch ? createdMatch[1] : null;
+  const content = await readFile(filePath, "utf-8");
+  const lines = content.split("\n");
 
-      const dueMatch = note.content.match(/due:\s*(\d{4}-\d{2}-\d{2})/i);
-      const due = dueMatch ? dueMatch[1] : null;
+  const tasks: Task[] = [];
+  const incompleteTaskRegex = /^- \[ \] (.+)$/;
 
-      return {
-        ...note,
-        completed,
-        created,
-        due,
-      };
+  lines.forEach((line, index) => {
+    const match = line.match(incompleteTaskRegex);
+    if (match) {
+      tasks.push({
+        key: index,
+        title: match[1].trim(),
+        line: index,
+      });
+    }
+  });
+
+  return tasks;
+}
+
+export function useTasks() {
+  return useCachedPromise(getTasks);
+}
+
+function searchItemsByTitleAndContent<T extends { title: string; content: string }>(items: T[], query: string): T[] {
+  const lowerQuery = query.toLowerCase();
+  const queryWords = lowerQuery.split(/\s+/).filter(Boolean);
+
+  return items
+    .map((item) => {
+      const title = item.title.toLowerCase();
+      const content = item.content.toLowerCase();
+
+      let rank = 0;
+
+      // Exact match in title
+      if (title === lowerQuery) rank = 10;
+      // Exact match in content
+      else if (content.includes(lowerQuery)) rank = 9;
+      // All words match in title
+      else if (queryWords.every((w) => title.includes(w))) rank = 8;
+      // All words match in content
+      else if (queryWords.every((w) => content.includes(w))) rank = 7;
+
+      return { item, rank };
     })
+    .filter(({ rank }) => rank > 0) // keep only matches
+    .sort((a, b) => b.rank - a.rank) // highest rank first
+    .map(({ item }) => item);
+}
 
-    .sort((a, b) => {
-      // Sort by due first: oldest on top (nulls at bottom)
-      if (a.due && b.due) {
-        if (a.due < b.due) return -1;
-        if (a.due > b.due) return 1;
-      } else if (a.due && !b.due) {
-        return -1;
-      } else if (!a.due && b.due) {
-        return 1;
-      }
-      // If due is same or both missing, sort by created: oldest on top (nulls at bottom)
-      if (a.created && b.created) {
-        if (a.created < b.created) return -1;
-        if (a.created > b.created) return 1;
-      } else if (a.created && !b.created) {
-        return -1;
-      } else if (!a.created && b.created) {
-        return 1;
-      }
-      return 0;
-    })
+export function searchNotes(notes: Note[], query: string): Note[] {
+  return searchItemsByTitleAndContent(notes, query);
+}
 
-    .filter((task): task is Task => Boolean(task && !task.completed));
+export function searchSnippets(snippets: Snippet[], query: string): Snippet[] {
+  return searchItemsByTitleAndContent(snippets, query);
 }

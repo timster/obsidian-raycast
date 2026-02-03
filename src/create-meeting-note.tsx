@@ -5,6 +5,6 @@ export default function createMeetingNoteCommand(props: LaunchProps) {
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
   const title = makeSafeNoteName(`${today} - ${props.arguments.title?.trim() || "Untitled"}`);
 
-  open(`obsidian://new?vault=Obsidian&file=meetings/${title}`);
-  closeMainWindow();
+  void open(`obsidian://new?vault=Obsidian&file=meetings/${title}`);
+  void closeMainWindow();
 }
